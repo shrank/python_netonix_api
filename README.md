@@ -14,7 +14,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 # Description
 The Netonix® WISP Switches provide a WebAPI as backend for their webinterface. This python script allows to access this API directly.
 
-Current methodes:
+Current methods:
 ```open(ip,user,password)
 getConfig()
 backup()
