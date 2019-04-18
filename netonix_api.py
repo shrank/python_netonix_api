@@ -32,6 +32,7 @@ For more information, please refer to <http://unlicense.org/>
 
 import requests
 import time
+import json
 
 class Netonix():
 	def __init__(self):
@@ -113,7 +114,6 @@ if __name__ == '__main__':
 	import traceback
 	import urllib3
 	import sys
-	import json
 	urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 	ip=str(input("switch ip:"))
 	user=str(input("user:"))
