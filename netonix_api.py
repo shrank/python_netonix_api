@@ -58,6 +58,21 @@ class Netonix():
         self.status = {}
         self.id = ""
 
+    def _get(self, url, params=None, timeout=15, **kwargs):
+        full_url = "https://"+self.ip+self.url[url]
+        return self.s.get(full_url, params=params, timeout=timeout, **kwargs)
+
+    def _post(self, url, data=None, json=None, timeout=15, **kwargs):
+        full_url = "https://"+self.ip+self.url[url]
+        return self.s.post(
+            full_url,
+            data=data,
+            json=json,
+            timeout=timeout,
+            **kwargs
+        )
+
+
     def open(self, ip, user, password):
         self.ip = ip
         self.s = requests.session()
@@ -65,26 +80,26 @@ class Netonix():
         data = {}
         data["username"] = user
         data["password"] = password
-        r = self.s.post("https://"+self.ip+self.url["login"], data)
+        r = self._post("login", data)
         if("Invalid username or password" in r.text):
             raise Exception("Invalid username or password")
 
     def getConfig(self):
-        r = self.s.get("https://"+self.ip+self.url["config"])
+        r = self._get("config")
         result = r.json()
         if("Config_Version" in result):
             self.config = result
 
     def putConfig(self):
-        r = self.s.post("https://"+self.ip+self.url["config"], json=self.config)
+        r = self._post("config", json=self.config)
         try:
-            r = self.s.post("https://"+self.ip+self.url["apply"], timeout=15)
+            r = self._post("apply")
         except Timeout:
             pass
         self.ip = self.config["IPv4_Address"]
         for a in range(5):
             try:
-                r = self.s.post("https://"+self.ip+self.url["confirm"], timeout=15)
+                r = self._post("confirm")
             except Timeout:
                 continue
             break
@@ -107,21 +122,21 @@ class Netonix():
         for a in newFile:
             data += a
         newFile.close()
-        r = self.s.post("https://"+self.ip+self.url["restore"], data)
+        r = self._post("restore", data)
         print(r.json())
         if(r.status_code != requests.codes.ok):
             raise Exception("Restore Request Failed")
-        r = self.s.get("https://"+self.ip+self.url["reboot"])
+        r = self._get("reboot")
         return r.json()
 
     def getMAC(self):
-        r = self.s.get("https://"+self.ip+self.url["mac"])
+        r = self._get("mac")
         if(r.status_code != requests.codes.ok):
             raise Exception("Action failed")
         self.mac = r.json()["MACTable"]
 
     def getID(self):
-        r = self.s.get("https://"+self.ip+self.url["id"]+"?_=%d" % time.time())
+        r = self._get("id", params={"_": time.time()})
         if(r.status_code != requests.codes.ok):
             raise Exception("Action failed")
         self.id = r.json()["BootID"]
@@ -138,10 +153,10 @@ class Netonix():
         data = ""
         with open(i, mode='rb') as file:  # b is important -> binary
             data = file.read()
-        r = self.s.post("https://"+self.ip+self.url["update"], data)
+        r = self._post("update", data)
         if(r.status_code != requests.codes.ok):
             raise Exception("Firmware Upload Failed")
-        r = self.s.get("https://"+self.ip+self.url["doupdate"])
+        r = self._get("doupdate")
         if(r.status_code != requests.codes.ok):
             raise Exception("Update Request Failed")
 
