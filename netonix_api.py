@@ -31,6 +31,7 @@ For more information, please refer to <http://unlicense.org/>
 """
 
 import requests
+from requests.exceptions import Timeout
 import time
 import json
 
@@ -49,6 +50,8 @@ class Netonix():
         self.url["mac"]="/api/v1/mactable"
         self.url["status"]="/api/v1/status/30sec"
         self.url["id"]="/api/v1/bootid"
+        self.url["update"]="/api/v1/uploadfirmware"
+        self.url["doupdate"]="/api/v1/upgradefirmware"
         self.config={}
         self.mac={}
         self.status={}
@@ -70,13 +73,21 @@ class Netonix():
         if("Config_Version" in result):
             self.config=result
     def putConfig(self):
-        raise Exception("the putConfig method is still untested.")
         r = self.s.post("https://"+self.ip+self.url["config"], json=self.config)
-        print(r.json())
-        r = self.s.post("https://"+self.ip+self.url["apply"])
-        time.sleep(2)
-        r = self.s.post("https://"+self.ip+self.url["confirm"])
-        return r.json()
+        try:
+            r = self.s.post("https://"+self.ip+self.url["apply"], timeout=15)
+        except Timeout:
+            pass
+        self.ip=self.config["IPv4_Address"]
+        for a in range(5):
+            try:
+                r = self.s.post("https://"+self.ip+self.url["confirm"], timeout=15)
+            except Timeout:
+                continue
+            break
+        if(r.status_code != requests.codes.ok):
+            raise Exception("Config Confirm Request Failed")
+        # return r.json()
     def backup(self,output):
         r = self.s.get("https://"+self.ip+self.url["backup"]+"/"+self.ip)
         if(r.status_code != requests.codes.ok):
@@ -99,15 +110,32 @@ class Netonix():
         return r.json()
     def getMAC(self):
         r = self.s.get("https://"+self.ip+self.url["mac"])
+        if(r.status_code != requests.codes.ok):
+            raise Exception("Action failed")
         self.mac=r.json()["MACTable"]
     def getID(self):
         r = self.s.get("https://"+self.ip+self.url["id"]+"?_=%d"%time.time())
+        if(r.status_code != requests.codes.ok):
+            raise Exception("Action failed")
         self.id=r.json()["BootID"]
     def getStatus(self):
         if(self.id==""):
             self.getID()
         r = self.s.get("https://"+self.ip+self.url["status"]+"?%s&_=%d"%(self.id,time.time()))
+        if(r.status_code != requests.codes.ok):
+            raise Exception("Action failed")
         self.status=r.json()
+    def update(self,i):
+        data=""
+        with open(i, mode='rb') as file: # b is important -> binary
+            data = file.read()
+        r = self.s.post("https://"+self.ip+self.url["update"],data)
+        if(r.status_code != requests.codes.ok):
+            raise Exception("Firmware Upload Failed")
+        r = self.s.get("https://"+self.ip+self.url["doupdate"])
+        if(r.status_code != requests.codes.ok):
+            raise Exception("Update Request Failed")
+
 
 if __name__ == '__main__':
     import getpass
