@@ -72,7 +72,6 @@ class Netonix():
             **kwargs
         )
 
-
     def open(self, ip, user, password):
         self.ip = ip
         self.s = requests.session()
