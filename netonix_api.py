@@ -35,50 +35,53 @@ from requests.exceptions import Timeout
 import time
 import json
 
+
 class Netonix():
     def __init__(self):
-        self.ip=None
-        self.s=None
-        self.url={}
-        self.url["login"]="/index.php"
-        self.url["backup"]="/api/v1/backup"
-        self.url["config"]="/api/v1/config"
-        self.url["apply"]="/api/v1/apply"
-        self.url["confirm"]="/api/v1/applystatus"
-        self.url["reboot"]="/api/v1/reboot"
-        self.url["restore"]="/api/v1/restore"
-        self.url["mac"]="/api/v1/mactable"
-        self.url["status"]="/api/v1/status/30sec"
-        self.url["id"]="/api/v1/bootid"
-        self.url["update"]="/api/v1/uploadfirmware"
-        self.url["doupdate"]="/api/v1/upgradefirmware"
-        self.config={}
-        self.mac={}
-        self.status={}
-        self.id=""
-        pass
-    def open(self,ip,user,password):
-        self.ip=ip
+        self.ip = None
+        self.s = None
+        self.url = {}
+        self.url["login"] = "/index.php"
+        self.url["backup"] = "/api/v1/backup"
+        self.url["config"] = "/api/v1/config"
+        self.url["apply"] = "/api/v1/apply"
+        self.url["confirm"] = "/api/v1/applystatus"
+        self.url["reboot"] = "/api/v1/reboot"
+        self.url["restore"] = "/api/v1/restore"
+        self.url["mac"] = "/api/v1/mactable"
+        self.url["status"] = "/api/v1/status/30sec"
+        self.url["id"] = "/api/v1/bootid"
+        self.url["update"] = "/api/v1/uploadfirmware"
+        self.url["doupdate"] = "/api/v1/upgradefirmware"
+        self.config = {}
+        self.mac = {}
+        self.status = {}
+        self.id = ""
+
+    def open(self, ip, user, password):
+        self.ip = ip
         self.s = requests.session()
-        self.s.verify=False
-        data={}
-        data["username"]=user
-        data["password"]=password
+        self.s.verify = False
+        data = {}
+        data["username"] = user
+        data["password"] = password
         r = self.s.post("https://"+self.ip+self.url["login"], data)
         if("Invalid username or password" in r.text):
             raise Exception("Invalid username or password")
+
     def getConfig(self):
         r = self.s.get("https://"+self.ip+self.url["config"])
-        result=r.json()
+        result = r.json()
         if("Config_Version" in result):
-            self.config=result
+            self.config = result
+
     def putConfig(self):
         r = self.s.post("https://"+self.ip+self.url["config"], json=self.config)
         try:
             r = self.s.post("https://"+self.ip+self.url["apply"], timeout=15)
         except Timeout:
             pass
-        self.ip=self.config["IPv4_Address"]
+        self.ip = self.config["IPv4_Address"]
         for a in range(5):
             try:
                 r = self.s.post("https://"+self.ip+self.url["confirm"], timeout=15)
@@ -88,48 +91,54 @@ class Netonix():
         if(r.status_code != requests.codes.ok):
             raise Exception("Config Confirm Request Failed")
         # return r.json()
-    def backup(self,output):
+
+    def backup(self, output):
         r = self.s.get("https://"+self.ip+self.url["backup"]+"/"+self.ip)
         if(r.status_code != requests.codes.ok):
             raise Exception("Backup Request Failed")
         newFile = open(output, "wb")
         newFile.write(r.content)
         newFile.close()
-    def restore(self,i):
+
+    def restore(self, i):
         raise Exception("the restore method is still untested.")
         newFile = open(i, "rb")
-        data=""
+        data = ""
         for a in newFile:
-            data+=a
+            data += a
         newFile.close()
-        r = self.s.post("https://"+self.ip+self.url["restore"],data)
+        r = self.s.post("https://"+self.ip+self.url["restore"], data)
         print(r.json())
         if(r.status_code != requests.codes.ok):
             raise Exception("Restore Request Failed")
         r = self.s.get("https://"+self.ip+self.url["reboot"])
         return r.json()
+
     def getMAC(self):
         r = self.s.get("https://"+self.ip+self.url["mac"])
         if(r.status_code != requests.codes.ok):
             raise Exception("Action failed")
-        self.mac=r.json()["MACTable"]
+        self.mac = r.json()["MACTable"]
+
     def getID(self):
-        r = self.s.get("https://"+self.ip+self.url["id"]+"?_=%d"%time.time())
+        r = self.s.get("https://"+self.ip+self.url["id"]+"?_=%d" % time.time())
         if(r.status_code != requests.codes.ok):
             raise Exception("Action failed")
-        self.id=r.json()["BootID"]
+        self.id = r.json()["BootID"]
+
     def getStatus(self):
-        if(self.id==""):
+        if(self.id == ""):
             self.getID()
-        r = self.s.get("https://"+self.ip+self.url["status"]+"?%s&_=%d"%(self.id,time.time()))
+        r = self.s.get("https://"+self.ip+self.url["status"]+"?%s&_=%d" % (self.id, time.time()))
         if(r.status_code != requests.codes.ok):
             raise Exception("Action failed")
-        self.status=r.json()
-    def update(self,i):
-        data=""
-        with open(i, mode='rb') as file: # b is important -> binary
+        self.status = r.json()
+
+    def update(self, i):
+        data = ""
+        with open(i, mode='rb') as file:  # b is important -> binary
             data = file.read()
-        r = self.s.post("https://"+self.ip+self.url["update"],data)
+        r = self.s.post("https://"+self.ip+self.url["update"], data)
         if(r.status_code != requests.codes.ok):
             raise Exception("Firmware Upload Failed")
         r = self.s.get("https://"+self.ip+self.url["doupdate"])
@@ -139,14 +148,13 @@ class Netonix():
 
 if __name__ == '__main__':
     import getpass
-    import traceback
     import urllib3
-    import sys
+
     urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-    ip=str(input("switch ip:"))
-    user=str(input("user:"))
-    pw= getpass.getpass("password:")
-    n=Netonix()
-    n.open(ip,user,pw)
+    ip = str(input("switch ip:"))
+    user = str(input("user:"))
+    pw = getpass.getpass("password:")
+    n = Netonix()
+    n.open(ip, user, pw)
     n.getStatus()
-    print(json.dumps(n.status,indent=4))
+    print(json.dumps(n.status, indent=4))
