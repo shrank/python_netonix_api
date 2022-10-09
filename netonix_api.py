@@ -72,6 +72,24 @@ class Netonix():
             **kwargs
         )
 
+    @staticmethod
+    def _merge_by_key(old, new, key="Number", append=True):
+        for item in new:
+            found = False
+            for old_item in old:
+                if(key not in old_item):
+                    continue
+                if(old_item[key] != item[key]):
+                    continue
+                old_item.update(item)
+                found = True
+                break
+            if(found is False):
+                if(append is True):
+                    old_item.append(new)
+                else:
+                    raise LookupError()
+
     def open(self, ip, user, password):
         self.ip = ip
         self.s = requests.session()
@@ -159,6 +177,28 @@ class Netonix():
         if(r.status_code != requests.codes.ok):
             raise Exception("Update Request Failed")
 
+    def mergeConfig(self, config):
+        for k, v in config.items():
+            if(k == "Ports"):
+                self._merge_by_key(self.config[k], v, key="Number")
+                continue
+            if(k == "LACP"):
+                self._merge_by_key(self.config[k], v, key="Port")
+                continue
+            if(k == "VLANs"):
+                self._merge_by_key(self.config[k], v, key="ID")
+                continue
+            if(type(v) is dict):
+                continue
+            if(type(v) is list):
+                self.config[k] += v
+                continue
+            self.config[k] = v
+
+    def replaceConfig(self, config):
+        if("Config_Version" in config):
+            del config["Config_Version"]
+        self.config.update(config)
 
 if __name__ == '__main__':
     import getpass
