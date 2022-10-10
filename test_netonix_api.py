@@ -1295,6 +1295,14 @@ class TestMergeConfig(unittest.TestCase):
                 continue
             self.assertEqual(self.n.config[k], v)
 
+    def test_mergeConfigEmpty(self):
+        config_new = {}
+
+        self.n = Netonix()
+        self.n.config = get_test_config()
+        self.n.mergeConfig(config_new)
+
+        self.assertEqual(self.n.config, get_test_config())
 
 if __name__ == '__main__':
     unittest.main()

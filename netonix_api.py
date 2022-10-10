@@ -32,9 +32,14 @@ For more information, please refer to <http://unlicense.org/>
 
 import requests
 from requests.exceptions import Timeout
+from copy import deepcopy
 import time
 import json
-
+try:
+    from deepdiff import DeepDiff
+    DIFF = True
+except:
+    DIFF = False
 
 class Netonix():
     def __init__(self):
@@ -54,6 +59,7 @@ class Netonix():
         self.url["update"] = "/api/v1/uploadfirmware"
         self.url["doupdate"] = "/api/v1/upgradefirmware"
         self.config = {}
+        self.orig_config = None
         self.mac = {}
         self.status = {}
         self.id = ""
@@ -178,6 +184,8 @@ class Netonix():
             raise Exception("Update Request Failed")
 
     def mergeConfig(self, config):
+        self.orig_config = deepcopy(self.config)
+
         for k, v in config.items():
             if(k == "Ports"):
                 self._merge_by_key(self.config[k], v, key="Number")
@@ -196,9 +204,23 @@ class Netonix():
             self.config[k] = v
 
     def replaceConfig(self, config):
+        self.orig_config = deepcopy(self.config)
+
         if("Config_Version" in config):
             del config["Config_Version"]
         self.config.update(config)
+
+    def getDiff(self):
+        if(self.orig_config is None):
+            return {}
+        if(DIFF is False):
+            raise ImportError("Missing DeepDiff Module")
+        return DeepDiff(
+            self.orig_config,
+            self.config,
+            exclude_paths="root['Config_Version']"
+            )
+
 
 if __name__ == '__main__':
     import getpass
