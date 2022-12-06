@@ -17,6 +17,8 @@ The Netonix® WISP Switches provide a WebAPI as backend for their webinterface. 
 
 to change configuration, you need to fetch the full configuration first, change it and push it back up:
 ```
+from netonix_api import Netonix
+
 	n=Netonix()
 	n.open(ip,user,pw)
 	n.getConfig()
