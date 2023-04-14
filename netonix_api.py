@@ -153,7 +153,7 @@ class Netonix():
         return r.json()
 
     def getMAC(self):
-        r = self._get("mac")
+        r = self._get("mac", timeout=60)
         if(r.status_code != requests.codes.ok):
             raise Exception("Action failed")
         self.mac = r.json()["MACTable"]
@@ -232,5 +232,7 @@ if __name__ == '__main__':
     pw = getpass.getpass("password:")
     n = Netonix()
     n.open(ip, user, pw)
-    n.getStatus()
-    print(json.dumps(n.status, indent=4))
+    n.getMAC()
+    print(json.dumps(n.mac, indent=4))
+    n.getMAC()
+    print(json.dumps(n.mac, indent=4))
